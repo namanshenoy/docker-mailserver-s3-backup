@@ -7,6 +7,6 @@ This is a script that gathers the mail data from [docker-mailserver](https://git
 This is meant to run as a cronjob repeatedly.
 To run this:
 * Git clone this.
-* Use PGP to decrypt the secrets.json.encrypted file
+* Use GPG to decrypt the secrets.json.gpg file
 * Update any settings as required
 * Add the python file to your root user's crontab
