@@ -186,3 +186,4 @@ dmypy.json
 
 *.tar.gz
 secrets.conf
+newrelic.ini

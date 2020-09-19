@@ -4,7 +4,9 @@ from datetime import datetime
 from botocore.exceptions import ClientError
 from configparser import ConfigParser, NoOptionError, NoSectionError
 from boto3_type_annotations.s3 import Client
+import newrelic.agent
 
+application = newrelic.agent.register_application(timeout=10.0)
 
 class ConfigError(Exception):
     def __init__(self, message):
@@ -42,6 +44,7 @@ class Config:
         except Exception as e:
             raise ConfigError(f"An unknown error occured. {e}")
 
+@newrelic.agent.function_trace(name="create_backup", group="function")
 def create_backup(config: Config) -> str:
     today = datetime.now()
     timestamp = today.strftime("%Y-%m-%d")
@@ -60,7 +63,7 @@ def create_backup(config: Config) -> str:
         )
     return filename
 
-
+@newrelic.agent.function_trace(name="s3_upload", group="function")
 def upload_file(file_name: str, bucket_name: str, s3_client: Client) -> bool:
     today = datetime.now()
     try:
@@ -70,7 +73,6 @@ def upload_file(file_name: str, bucket_name: str, s3_client: Client) -> bool:
         return False
     return True
 
-
 def get_s3_client(conf: Config) -> Client:
     return boto3.client(
         "s3",
@@ -78,15 +80,18 @@ def get_s3_client(conf: Config) -> Client:
         aws_secret_access_key=conf.get("aws_s3_credentials", "secret_key"),
     )
 
+def run():
+    with newrelic.agent.BackgroundTask(application, name="gpnn-ai-mail-backup", group="Task"):
+        conf = Config()
+        backup_filename = create_backup(conf)
+        upload_success = upload_file(
+            file_name=backup_filename,
+            bucket_name=conf.get("aws_s3_bucket", "name"),
+            s3_client=get_s3_client(conf),
+        )
+        if upload_success:
+            subprocess.run(f"rm {os.path.join(current_path(), backup_filename)}".split())
 
 if __name__ == "__main__":
-    conf = Config()
-    backup_filename = create_backup(conf)
-    upload_success = upload_file(
-        file_name=backup_filename,
-        bucket_name=conf.get("aws_s3_bucket", "name"),
-        s3_client=get_s3_client(conf),
-    )
-    if upload_success:
-        subprocess.run(f"rm {os.path.join(current_path(), backup_filename)}".split())
+    run()
     print("Done!")
