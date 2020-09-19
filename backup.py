@@ -16,11 +16,13 @@ class BackupCreationError(Exception):
         self.message = message
 
 
+def current_path() -> str:
+    return os.path.dirname(os.path.realpath(__file__))
+
 class Config:
     def __init__(self, filename: str = "secrets.conf"):
         conf = ConfigParser()
-        path_name = os.path.dirname(os.path.realpath(__file__))
-        conf.read(os.path.join(path_name, filename))
+        conf.read(os.path.join(current_path(), filename))
         self.conf = conf
 
     def get_conf(self) -> ConfigParser:
@@ -40,7 +42,6 @@ class Config:
         except Exception as e:
             raise ConfigError(f"An unknown error occured. {e}")
 
-
 def create_backup(config: Config) -> str:
     today = datetime.now()
     timestamp = today.strftime("%Y-%m-%d")
@@ -48,7 +49,7 @@ def create_backup(config: Config) -> str:
     filename = f"{filename_base}-{timestamp}.tar.gz"
     # script = f"tar czf {filename} env"
     volume_name = config.get("backup_data", "volume_name")
-    path_name = os.path.dirname(os.path.realpath(__file__))
+    path_name = current_path()
     script = f"docker run --rm   --volume {volume_name}:/dbdata   --volume {path_name}:/backup   ubuntu   tar czf /backup/{filename} /dbdata"
     process = subprocess.run(
         script.split(), stderr=subprocess.PIPE, stdout=subprocess.PIPE
@@ -63,7 +64,7 @@ def create_backup(config: Config) -> str:
 def upload_file(file_name: str, bucket_name: str, s3_client: Client) -> bool:
     today = datetime.now()
     try:
-        response = s3_client.upload_file(file_name, bucket_name, file_name)
+        response = s3_client.upload_file(os.path.join(current_path(), file_name), bucket_name, file_name)
     except ClientError as e:
         print(e)
         return False
@@ -87,5 +88,5 @@ if __name__ == "__main__":
         s3_client=get_s3_client(conf),
     )
     if upload_success:
-        subprocess.run(f"rm {backup_filename}".split())
+        subprocess.run(f"rm {os.path.join(current_path(), backup_filename)}".split())
     print("Done!")
