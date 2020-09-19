@@ -49,7 +49,7 @@ def create_backup(config: Config) -> str:
     process = subprocess.run(
         script.split(), stderr=subprocess.PIPE, stdout=subprocess.PIPE
     )
-    if process.returncode is not 0:
+    if process.returncode != 0:
         raise BackupCreationError(
             f"Backup could not be created.\n{process.stderr.decode('utf-8')}"
         )
