@@ -19,7 +19,8 @@ class BackupCreationError(Exception):
 class Config:
     def __init__(self, filename: str = "secrets.conf"):
         conf = ConfigParser()
-        conf.read(filename)
+        path_name = os.path.dirname(os.path.realpath(__file__))
+        conf.read(os.path.join(path_name, filename))
         self.conf = conf
 
     def get_conf(self) -> ConfigParser:
@@ -34,7 +35,7 @@ class Config:
             raise ConfigError(f"There is no option {option} in section {section}")
         except NoSectionError as e:
             raise ConfigError(
-                f"There is no section {section} in the configuratin provided"
+                f"There is no section {section} in the configuration provided"
             )
         except Exception as e:
             raise ConfigError(f"An unknown error occured. {e}")
