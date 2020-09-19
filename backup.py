@@ -1,4 +1,4 @@
-import subprocess
+import subprocess, os
 import boto3
 from datetime import datetime
 from botocore.exceptions import ClientError
@@ -43,9 +43,12 @@ class Config:
 def create_backup(config: Config) -> str:
     today = datetime.now()
     timestamp = today.strftime("%Y-%m-%d")
-    filename_base = config.get("backup_file", "name")
+    filename_base = config.get("backup_data", "filename")
     filename = f"{filename_base}-{timestamp}.tar.gz"
-    script = f"tar czf {filename} env"
+    # script = f"tar czf {filename} env"
+    volume_name = config.get("backup_data", "volume_name")
+    path_name = os.path.dirname(os.path.realpath(__file__))
+    script = f"docker run --rm   --volume {volume_name}:/dbdata   --volume {path_name}:/backup   ubuntu   tar czf /backup/{filename} /dbdata"
     process = subprocess.run(
         script.split(), stderr=subprocess.PIPE, stdout=subprocess.PIPE
     )
